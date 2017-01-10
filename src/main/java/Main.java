@@ -9,24 +9,71 @@ import com.corundumstudio.socketio.listener.DisconnectListener;
 
 import static spark.Spark.*;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+
+import com.google.gson.Gson;
+
 public class Main {
 	
 	public static int counter = 0;
 	public static SocketIOServer server;
+	public static ArrayList<Order> orders;
+	
+	public static class Order {
+		public String id;
+		public String name;
+		public String value;
+	}
+	
+	public static class Message {
+		public String action;
+		public String type;
+		public String id;
+		public String fields;
+	}
+	
+	public static String getMD5(Object obj) {
+		String json = new Gson().toJson(obj);
+		try {
+			return MessageDigest.getInstance("MD5").digest(json.getBytes()).toString();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} 
+	}
 	
     public static void main(String[] args) throws InterruptedException {
     	
+    	orders = new ArrayList<Order>();
     	Configuration config = new Configuration();
         config.setHostname("localhost");
         config.setPort(10443);
 
         server = new SocketIOServer(config);
         
+        server.addEventListener("subscribe", String.class, new DataListener<String>() {
+            @Override
+            public void onData(SocketIOClient client, String data, AckRequest ackRequest) {
+            	if(data.equals("orders")) {
+            		Main.orders.forEach(order -> {
+            			Message msg = new Message();
+            			msg.action = "added";
+            			msg.type = "order";
+            			msg.id = "" + order.value;
+            			msg.fields = new Gson().toJson(order);
+            			client.sendEvent("update", msg);
+            		});
+            	}
+            }
+        });
+        
         server.addEventListener("message", String.class, new DataListener<String>() {
             @Override
             public void onData(SocketIOClient client, String data, AckRequest ackRequest) {
-//                server.getBroadcastOperations().sendEvent("message", data);
-                client.sendEvent("message", "count: " + Main.counter);
+
             }
         });
         
@@ -49,9 +96,46 @@ public class Main {
 			}
 		});
         
+        options("/*", (request, response) -> {
+
+            String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
+            if (accessControlRequestHeaders != null) {
+                response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+            }
+
+            String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
+            if (accessControlRequestMethod != null) {
+                response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+            }
+
+            return "OK";
+        });
+
+        before((request, response) -> {
+            response.header("Access-Control-Allow-Origin", "*");
+            response.header("Access-Control-Request-Method", "*");
+            response.header("Access-Control-Allow-Headers", "*");
+            // Note: this may or may not be necessary in your particular application
+            response.type("application/json");
+        });
+        
         get("/hello", (req, res) -> {
         	Main.counter++;
-        	return "{'bla':'bla'}";
+        	Main.server.getBroadcastOperations().sendEvent("message", Main.counter);
+        	return "Counter: " + Main.counter;
+        });
+        
+        post("/orders", (req, res) -> {
+        	Gson gson = new Gson();
+        	Order body = gson.fromJson(req.body(), Order.class);
+        	orders.add(body);
+        	Message msg = new Message();
+        	msg.action = "added";
+        	msg.type = "order";
+        	msg.id = body.id;
+        	msg.fields = gson.toJson(body);
+        	Main.server.getBroadcastOperations().sendEvent("update", msg);
+        	return "posted";
         });
         
         server.start();
@@ -64,7 +148,11 @@ public class Main {
 				while(true) {
 					try {
 						Thread.sleep(2000);
-						Main.server.getBroadcastOperations().sendEvent("update", "{type: 'A', id:'1'}");
+//						Message msg = new Message();
+//			        	msg.action = "added";
+//			        	msg.type = "order";
+//			        	msg.id = "" + Math.random();
+//						Main.server.getBroadcastOperations().sendEvent("update", new Gson().toJson(msg));
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
