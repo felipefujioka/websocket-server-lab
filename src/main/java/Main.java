@@ -25,6 +25,12 @@ public class Main {
 		public String id;
 		public String name;
 		public String value;
+		
+		public boolean equals(Object obj) {
+			if (obj == null) return false;
+		    if (obj == this) return true;
+		    return ((Order)obj).id.equals(this.id);
+		}
 	}
 	
 	public static class Message {
@@ -62,7 +68,7 @@ public class Main {
             			Message msg = new Message();
             			msg.action = "added";
             			msg.type = "order";
-            			msg.id = "" + order.value;
+            			msg.id = "" + order.id;
             			msg.fields = new Gson().toJson(order);
             			client.sendEvent("update", msg);
             		});
@@ -82,7 +88,7 @@ public class Main {
 			@Override
 			public void onConnect(SocketIOClient client) {
 				// TODO Auto-generated method stub
-				client.sendEvent("connect", "Connected as: " + client.getSessionId());
+//				client.sendEvent("connect", "Connected as: " + client.getSessionId());
 				
 			}
 		});
@@ -119,23 +125,47 @@ public class Main {
             response.type("application/json");
         });
         
-        get("/hello", (req, res) -> {
-        	Main.counter++;
-        	Main.server.getBroadcastOperations().sendEvent("message", Main.counter);
-        	return "Counter: " + Main.counter;
-        });
-        
         post("/orders", (req, res) -> {
+        	
         	Gson gson = new Gson();
         	Order body = gson.fromJson(req.body(), Order.class);
+        	if(!orders.contains(body)){
+	        	orders.add(body);
+	        	Message msg = new Message();
+	        	msg.action = "added";
+	        	msg.type = "order";
+	        	msg.id = body.id;
+	        	msg.fields = gson.toJson(body);
+	        	Main.server.getBroadcastOperations().sendEvent("update", msg);
+        	}
+        	return "posted";
+        });
+        
+        put("/orders/:id", (req, res) -> {
+        	Gson gson = new Gson();
+        	Order body = gson.fromJson(req.body(), Order.class);
+        	orders.remove(body);
         	orders.add(body);
         	Message msg = new Message();
-        	msg.action = "added";
+        	msg.action = "changed";
         	msg.type = "order";
         	msg.id = body.id;
         	msg.fields = gson.toJson(body);
         	Main.server.getBroadcastOperations().sendEvent("update", msg);
-        	return "posted";
+        	return "updated";
+        });
+        
+        delete("/orders/:id", (req, res) -> {
+        	Order obj = new Order();
+        	obj.id = req.params(":id");
+        	orders.remove(obj);
+        	
+        	Message msg = new Message();
+        	msg.action = "removed";
+        	msg.type = "order";
+        	msg.id = req.params(":id");
+        	Main.server.getBroadcastOperations().sendEvent("update", msg);
+        	return "deleted";
         });
         
         server.start();
