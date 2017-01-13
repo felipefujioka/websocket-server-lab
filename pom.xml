@@ -4,6 +4,33 @@
   <artifactId>websocket-server-lab</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>websocket-server-lab</name>
+  <repositories>
+      <repository>
+	      <id>jcenter</id>
+	      <url>http://jcenter.bintray.com </url>
+	      <snapshots>
+	        <enabled>true</enabled>
+	        <updatePolicy>never</updatePolicy>
+	        <checksumPolicy>warn</checksumPolicy>
+	      </snapshots>
+	       <releases>
+	         <enabled>true</enabled>
+	         <checksumPolicy>warn</checksumPolicy>
+	      </releases>
+	   </repository>
+  </repositories>
+  <pluginRepositories>
+	   <pluginRepository>
+	      <id>jcenter</id>
+	      <name>jcenter</name>
+	      <url>http://jcenter.bintray.com </url>
+	   </pluginRepository>
+	   <pluginRepository>
+	      <id>jfrog-plugins</id>
+	      <name>jfrog-plugins-dist</name>
+	      <url>http://repo.jfrog.org/artifactory/plugins-releases</url>
+	   </pluginRepository>
+	</pluginRepositories>
   <dependencies>
     <dependency>
 			<groupId>com.sparkjava</groupId>
@@ -30,5 +57,10 @@
 	    <artifactId>pubnub</artifactId>
 	    <version>3.7.10</version>
     </dependency>
+		<dependency>
+		    <groupId>io.deepstream</groupId>
+		    <artifactId>deepstream.io-client-java</artifactId>
+		    <version>1.0.1</version>
+		</dependency>
   </dependencies>
 </project>
