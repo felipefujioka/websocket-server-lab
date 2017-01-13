@@ -1,30 +1,17 @@
-import com.corundumstudio.socketio.AckRequest;
-
-import com.corundumstudio.socketio.Configuration;
-import com.corundumstudio.socketio.SocketIOClient;
-import com.corundumstudio.socketio.SocketIOServer;
-import com.corundumstudio.socketio.listener.ConnectListener;
-import com.corundumstudio.socketio.listener.DataListener;
-import com.corundumstudio.socketio.listener.DisconnectListener;
-
 import static spark.Spark.*;
 
 import java.net.URISyntaxException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
 import com.google.gson.Gson;
 
-import com.pubnub.api.*;
 import io.deepstream.*;
 
 public class Main {
 	
 	public static int counter = 0;
-	public static SocketIOServer server;
 	public static ArrayList<Order> orders;
 	public static int currentSequenceNumber = 0;
 	public static DeepstreamClient ds;
@@ -55,132 +42,24 @@ public class Main {
 		}
 		
 	}
-	
-	public static String getMD5(Object obj) {
-		String json = new Gson().toJson(obj);
-		try {
-			return MessageDigest.getInstance("MD5").digest(json.getBytes()).toString();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		} 
-	}
+
 	
     public static void main(String[] args) throws InterruptedException {
     	
     	orders = new ArrayList<Order>();
-//    	Configuration config = new Configuration();
-//        config.setHostname("localhost");
-//        config.setPort(10443);
-
-//        final Pubnub pubnub = new Pubnub("pub-c-ca89589b-68e4-48ee-85dd-2cc9cf01280a", "sub-c-6ded6650-d904-11e6-a478-02ee2ddab7fe");
-
-        
-//        try {
-//		  pubnub.subscribe("my_channel", new Callback() {
-//		      @Override
-//		      public void connectCallback(String channel, Object message) {
-//		          pubnub.publish("my_channel", "Hello from the PubNub Java SDK", new Callback() {});
-//		      }
-//		 
-//		      @Override
-//		      public void disconnectCallback(String channel, Object message) {
-//		          System.out.println("SUBSCRIBE : DISCONNECT on channel:" + channel
-//		                     + " : " + message.getClass() + " : "
-//		                     + message.toString());
-//		      }
-//		 
-//		      public void reconnectCallback(String channel, Object message) {
-//		          System.out.println("SUBSCRIBE : RECONNECT on channel:" + channel
-//		                     + " : " + message.getClass() + " : "
-//		                     + message.toString());
-//		      }
-//		 
-//		      @Override
-//		      public void successCallback(String channel, Object message) {
-//		          System.out.println("SUBSCRIBE : " + channel + " : "
-//		                     + message.getClass() + " : " + message.toString());
-//		      }
-//		 
-//		      @Override
-//		      public void errorCallback(String channel, PubnubError error) {
-//		          System.out.println("SUBSCRIBE : ERROR on channel " + channel
-//		                     + " : " + error.toString());
-//		      }
-//		    }
-//		  );
-//		} catch (PubnubException e) {
-//		  System.out.println(e.toString());
-//		}
         
         
 		try {
 			Main.ds = new DeepstreamClient( "localhost:6020" );
 			Main.ds.login();
 			System.out.println("deepstream login");
+			List list = Main.ds.record.getList("orders");
+			list.setEntries(new ArrayList<String>());
 		} catch (URISyntaxException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
         
-        
-//        server = new SocketIOServer(config);
-//        
-//        server.addEventListener("subscribe", String.class, new DataListener<String>() {
-//            public void onData(SocketIOClient client, String data, AckRequest ackRequest) {
-//            	if(data.equals("orders")) {
-//            		
-//            		// makes a snapshot of the state to send to client
-//            		ArrayList<Order> copy = new ArrayList<Order>(Main.orders.size());
-//            		synchronized(this) {
-//	            		Main.orders.forEach(item -> {
-//	            			copy.add(item);
-//	            		});
-//            		}
-//            		
-//            		copy.forEach(order -> {
-//            			Message msg = new Message();
-//            			msg.action = "added";
-//            			msg.type = "order";
-//            			msg.id = "" + order.id;
-//            			msg.fields = new Gson().toJson(order);
-//            			msg.seq = -1;
-//            			client.sendEvent("snapshot", msg);
-//            		});
-//            		// sends the updated current sequence number so the client can ignore old updates
-//            		Message readyMsg = new Message();
-//            		readyMsg.seq = -1;
-//        			client.sendEvent("ready", readyMsg);
-//            	}
-//            }
-//        });
-//        
-//        server.addEventListener("message", String.class, new DataListener<String>() {
-//            @Override
-//            public void onData(SocketIOClient client, String data, AckRequest ackRequest) {
-//
-//            }
-//        });
-//        
-//        server.addConnectListener(new ConnectListener() {
-//			
-//			@Override
-//			public void onConnect(SocketIOClient client) {
-//				// TODO Auto-generated method stub
-////				client.sendEvent("connect", "Connected as: " + client.getSessionId());
-//				
-//			}
-//		});
-//        
-//        server.addDisconnectListener(new DisconnectListener() {
-//			
-//			@Override
-//			public void onDisconnect(SocketIOClient client) {
-//				// TODO Auto-generated method stub
-//				client.sendEvent("disconnect", "Disconnected");
-//			}
-//		});
         
         options("/*", (request, response) -> {
 
@@ -206,17 +85,6 @@ public class Main {
         });
         
         get("/hello", (req, res) -> {
-        	
-        	Callback callback = new Callback() {
-    		  public void successCallback(String channel, Object response) {
-    		    System.out.println(response.toString());
-    		  }
-    		  public void errorCallback(String channel, PubnubError error) {
-    		    System.out.println(error.toString());
-    		  }
-    		};
-    		
-//    		pubnub.publish("my_channel", "Hello from the PubNub Java SDK!" , callback);
     		
         	return "Hello!";
         });
@@ -232,7 +100,6 @@ public class Main {
 	        	msg.type = "order";
 	        	msg.id = body.id;
 	        	msg.fields = gson.toJson(body);
-//	        	Main.server.getBroadcastOperations().sendEvent("update", msg);
         	}
         	return "{}";
         });
@@ -247,7 +114,6 @@ public class Main {
         	msg.type = "order";
         	msg.id = body.id;
         	msg.fields = gson.toJson(body);
-//        	Main.server.getBroadcastOperations().sendEvent("update", msg);
         	return "{}";
         });
         
@@ -260,56 +126,40 @@ public class Main {
         	msg.action = "removed";
         	msg.type = "order";
         	msg.id = req.params(":id");
-//        	Main.server.getBroadcastOperations().sendEvent("update", msg);
         	return "deleted";
         });
         
-//        server.start();
-        
-        new Thread(new Runnable() {
-			
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				while(true) {
-					try {
-						Thread.sleep(100);
-						synchronized(this) {
-							Gson gson = new Gson();
-							if (Main.orders.size() == 0 || Math.random() > 0.5){
-								Order order = new Order();
-								order.id = ""+((int)Math.floor(Math.random() * 1000));
-								order.name = "name " + order.id;
-								order.value = ""+((int)Math.floor((Math.random()*100)));
-								Main.orders.add(order);
-								Message msg = new Message();
-					        	msg.action = "added";
-					        	msg.type = "order";
-					        	msg.id = "" + order.id;
-					        	msg.fields = gson.toJson(order);
-//								Main.server.getBroadcastOperations().sendEvent("update", msg);
-							}else {
-								Order order = Main.orders.remove(0);
-								Message msg = new Message();
-					        	msg.action = "removed";
-					        	msg.type = "order";
-					        	msg.id = "" + order.id;
-					        	msg.fields = gson.toJson(order);
-//								Main.server.getBroadcastOperations().sendEvent("update", msg);
-							}
-							List list = Main.ds.record.getList("orders");
-							Stream<String> stream = Main.orders.stream().map(order -> "orders/"+order.id);
-							String[] array = stream.toArray(String[]::new); 
-							list.setEntries(Arrays.asList(array));
-						}
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					
-				}
-			}
-		}).start();
+//        new Thread(new Runnable() {
+//			
+//			@Override
+//			public void run() {
+//				// TODO Auto-generated method stub
+//				while(true) {
+//					try {
+//						Thread.sleep(100);
+//						synchronized(this) {
+//							if (Main.orders.size() == 0 || Math.random() > 0.5){
+//								Order order = new Order();
+//								order.id = ""+((int)Math.floor(Math.random() * 1000));
+//								order.name = "name " + order.id;
+//								order.value = ""+((int)Math.floor((Math.random()*100)));
+//								Main.orders.add(order);
+//							}else {
+//								Main.orders.remove(0);
+//							}
+//							List list = Main.ds.record.getList("orders");
+//							Stream<String> stream = Main.orders.stream().map(order -> "orders/"+order.id);
+//							String[] array = stream.toArray(String[]::new); 
+//							list.setEntries(Arrays.asList(array));
+//						}
+//					} catch (InterruptedException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//					
+//				}
+//			}
+//		}).start();
 
         new Thread(new Runnable() {
 			
@@ -318,34 +168,24 @@ public class Main {
 				// TODO Auto-generated method stub
 				while(true) {
 					try {
-						Thread.sleep(50);
+						Thread.sleep(500);
 						synchronized(this) {
-							Gson gson = new Gson();
+							List list = Main.ds.record.getList("orders");
 							if (Main.orders.size() == 0 || Math.random() > 0.5){
 								Order order = new Order();
 								order.id = ""+((int)Math.floor(Math.random() * 1000));
 								order.name = "name from 2 " + order.id;
 								order.value = ""+((int)Math.floor((Math.random()*100)));
 								Main.orders.add(order);
-								Message msg = new Message();
-					        	msg.action = "added";
-					        	msg.type = "order";
-					        	msg.id = "" + order.id;
-					        	msg.fields = gson.toJson(order);
-//								Main.server.getBroadcastOperations().sendEvent("update", msg);
+								Record record = Main.ds.record.getRecord("orders/"+order.id);
+								record.set("id", order.id);
+								record.set("name", order.name);
+								record.set("value", order.value);
+								list.addEntry("orders/"+order.id);
 							}else {
 								Order order = Main.orders.remove(0);
-								Message msg = new Message();
-					        	msg.action = "removed";
-					        	msg.type = "order";
-					        	msg.id = "" + order.id;
-					        	msg.fields = gson.toJson(order);
-//								Main.server.getBroadcastOperations().sendEvent("update", msg);
+								list.removeEntry("orders/"+order.id);
 							}
-							List list = Main.ds.record.getList("orders");
-							Stream<String> stream = Main.orders.stream().map(order -> "orders/"+order.id);
-							String[] array = stream.toArray(String[]::new); 
-							list.setEntries(Arrays.asList(array));
 						}
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
@@ -357,7 +197,5 @@ public class Main {
 		}).start();
         
         Thread.sleep(Integer.MAX_VALUE);
-
-//        server.stop();
     }
 }
